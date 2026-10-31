@@ -1,0 +1,40 @@
+{
+  "name": "velora",
+  "private": true,
+  "version": "1.0.0",
+  "description": "VELORA — serverless fashion e-commerce (Cloudflare Workers + D1 + R2 + Firebase + Duitku + Biteship)",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.1.0"
+  },
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "vite apps/web --port 5173 --strictPort",
+    "dev:web": "vite apps/web --port 5173 --strictPort",
+    "build:web": "vite build apps/web",
+    "build": "bun run typecheck && bun run build:web",
+    "preview": "bun run build:web && vite preview apps/web",
+    "deploy": "bun run build && wrangler deploy --config apps/web/build/server/wrangler.json",
+    "db:migrate:local": "wrangler d1 migrations apply velora-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply velora-db --remote",
+    "db:seed:local": "bun run infra/seeds/build.ts && wrangler d1 execute velora-db --local --file=./infra/seeds/generated/seed.sql",
+    "db:seed:remote": "bun run infra/seeds/build.ts && wrangler d1 execute velora-db --remote --file=./infra/seeds/generated/seed.sql",
+    "seed:admin": "bun run infra/scripts/bootstrap-admin.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "bun test tests"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@cloudflare/workers-types": "^4.20251014.0",
+    "@types/bun": "^1.2.20",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.4",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.13",
+    "wrangler": "^4.40.0"
+  }
+}

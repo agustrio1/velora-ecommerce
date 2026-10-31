@@ -1,0 +1,38 @@
+{
+  "rules": {
+    "chats": {
+      "$chatId": {
+        ".read": "auth != null && auth.uid == data.child('userId').val()",
+        ".write": false
+      }
+    },
+    "chatMessages": {
+      "$chatId": {
+        ".read": "auth != null && root.child('chats').child($chatId).child('userId').val() == auth.uid",
+        ".write": false
+      }
+    },
+    "presence": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    },
+    "typing": {
+      "$chatId": {
+        ".read": "auth != null && root.child('chats').child($chatId).child('userId').val() == auth.uid",
+        "$uid": {
+          ".write": "auth != null && auth.uid == $uid"
+        }
+      }
+    },
+    "userNotifications": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": false
+      }
+    },
+    ".read": false,
+    ".write": false
+  }
+}

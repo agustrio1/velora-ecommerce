@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+/*
+  VELORA design tokens — modern fashion editorial.
+  Palette is fixed by the brief; no gradients, glow, neon or glassmorphism.
+  Mobile-first, thin borders, generous white space, clear typography.
+*/
+@theme {
+  --color-canvas: #f7f6f2;
+  --color-surface: #ffffff;
+  --color-ink: #191919;
+  --color-muted: #777777;
+  --color-line: #e8e6e0;
+  --color-accent: #74634f;
+  --color-accent-ink: #efe9df;
+  --color-soft: #eeece6;
+
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 2px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 1px 2px rgba(25, 25, 25, 0.04);
+  --shadow-pop: 0 6px 24px rgba(25, 25, 25, 0.08);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-accent-ink);
+  }
+}
+
+@layer utilities {
+  .eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    font-weight: 600;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .prose-editorial {
+    line-height: 1.7;
+    color: var(--color-ink);
+  }
+  .prose-editorial h1 {
+    margin: 2rem 0 0.75rem;
+    font-size: 1.85rem;
+  }
+  .prose-editorial h2 {
+    margin: 1.75rem 0 0.75rem;
+    font-size: 1.5rem;
+  }
+  .prose-editorial h3 {
+    margin: 1.5rem 0 0.5rem;
+    font-size: 1.2rem;
+  }
+  .prose-editorial h4 {
+    margin: 1.25rem 0 0.5rem;
+    font-size: 1.05rem;
+  }
+  .prose-editorial blockquote {
+    margin: 1rem 0;
+    border-left: 2px solid var(--color-line);
+    padding-left: 0.9rem;
+    color: var(--color-muted);
+    font-style: italic;
+  }
+  .prose-editorial code {
+    border-radius: 4px;
+    background: var(--color-soft);
+    padding: 0.1rem 0.3rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.85em;
+  }
+  .prose-editorial hr {
+    margin: 1.75rem 0;
+    border: 0;
+    border-top: 1px solid var(--color-line);
+  }
+  .prose-editorial li {
+    margin: 0.25rem 0;
+  }
+  .prose-editorial p {
+    margin: 0.75rem 0;
+  }
+  .prose-editorial ul {
+    margin: 0.75rem 0;
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+  .prose-editorial ol {
+    margin: 0.75rem 0;
+    padding-left: 1.25rem;
+    list-style: decimal;
+  }
+  .prose-editorial a {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+  .prose-editorial img {
+    margin: 1rem 0;
+    max-width: 100%;
+  }
+  .prose-editorial strong {
+    font-weight: 650;
+  }
+  .prose-editorial > :first-child {
+    margin-top: 0;
+  }
+  .prose-editorial > :last-child {
+    margin-bottom: 0;
+  }
+}

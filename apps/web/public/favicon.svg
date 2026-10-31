@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="VELORA">
+  <rect width="64" height="64" fill="#191919" />
+  <text
+    x="32"
+    y="44"
+    text-anchor="middle"
+    fill="#F7F6F2"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="36"
+    letter-spacing="1"
+  >
+    V
+  </text>
+</svg>

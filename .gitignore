@@ -1,0 +1,43 @@
+# Secrets — NEVER commit
+.env
+.env.local
+.env.*.local
+!.env.example
+.dev.vars
+*.dev.vars
+apps/web/.env
+apps/web/.env.local
+apps/web/.env.*.local
+serviceAccount*.json
+firebase-adminsdk*.json
+
+# Build artifacts
+node_modules/
+apps/web/dist/
+apps/web/build/
+build/
+.wrangler/
+dist/
+*.tsbuildinfo
+
+# Database local state (miniflare SQLite files)
+.data/
+*.sqlite
+*.sqlite-journal
+
+# Generated seeds (rebuilt by `bun run db:seed`)
+infra/seeds/generated/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Local scratch: D1 query dumps from ad-hoc wrangler runs
+v1.json
+v2.json

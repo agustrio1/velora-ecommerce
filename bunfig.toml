@@ -1,0 +1,14 @@
+# Bun configuration for the VELORA monorepo.
+# Bun is the package manager and development runtime for tooling/scripts.
+# The production backend still runs on the Cloudflare Workers runtime, so no
+# Bun-only API is used inside apps/api.
+
+[install]
+# A single hoisted node_modules keeps `bun run`, vite and wrangler binaries
+# resolvable from the workspace root without per-package .bin folders.
+linker = "hoisted"
+frozen = false
+
+[test]
+# `bun test` discovers tests under /tests
+root = "./tests"

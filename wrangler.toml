@@ -1,0 +1,78 @@
+#:schema node_modules/wrangler/config-schema.json
+# VELORA — Cloudflare Workers (Hono API) + Workers Static Assets (React storefront/admin)
+# 100% serverless: no VPS, no Docker, no Nginx.
+
+name = "velora"
+main = "apps/web/workers/app.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+# account_id is read from CLOUDFLARE_ACCOUNT_ID / `wrangler login`; set it here for CI.
+
+# ---------------------------------------------------------------------------
+# Static assets: React Router writes client assets to build/client. Requests
+# that match a built file are served from the asset CDN; everything else reaches
+# the Worker (Hono for /api, React Router SSR for pages).
+# ---------------------------------------------------------------------------
+[assets]
+directory = "apps/web/build/client"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+run_worker_first = [
+  "/api/*",
+  "/webhooks/*",
+  "/sitemap.xml",
+  "/robots.txt",
+  "/manifest.webmanifest",
+  "/media/*"
+]
+
+# ---------------------------------------------------------------------------
+# Bindings. Replace the *_id values after provisioning with:
+#   bunx wrangler d1 create velora-db
+#   bunx wrangler r2 bucket create velora-media
+#   bunx wrangler kv namespace create VELORA_CACHE
+# ---------------------------------------------------------------------------
+[[d1_databases]]
+binding = "DB"
+database_name = "velora-db"
+database_id = "a4d3d754-d6c7-4f89-bb93-ce5d5b60eae0"
+migrations_dir = "infra/migrations"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "velora-media"
+
+[[kv_namespaces]]
+binding = "VELORA_CACHE"
+id = "7c6c4c33022644cc970c2e68b9747a4b"
+
+[vars]
+# These are the *deployed* values. Local dev overrides them from `.dev.vars`
+# (APP_ENV=development, APP_URL=http://localhost:5173, …), so one config serves
+# both — bindings are declared once here and are always present in the build.
+APP_ENV = "production"
+LOG_LEVEL = "warn"
+# Public (non-secret) configuration, mirrored to the browser through /api/config.
+BRAND_NAME = "VELORA"
+# APP_URL is used for canonical links, sitemap and provider callbacks.
+APP_URL = "https://velora.pribadiagus321.workers.dev"
+CORS_ALLOWED_ORIGINS = "https://velora.pribadiagus321.workers.dev"
+MEDIA_PUBLIC_BASE_URL = "https://velora.pribadiagus321.workers.dev/media"
+# Realtime Database host. The legacy `<project>.firebaseio.com` host answers 404
+# for projects created after 2019, so the region-specific host must be explicit.
+FIREBASE_DATABASE_URL = "https://velora-d3b5f-default-rtdb.asia-southeast1.firebasedatabase.app"
+
+[observability]
+enabled = true
+
+# ---------------------------------------------------------------------------
+# Deployment: `bun run deploy` (build + `wrangler deploy --config apps/web/build/server/wrangler.json`).
+# NOTE: do NOT introduce an [env.production] block — Wrangler does not inherit
+# d1_databases / r2_buckets / kv_namespaces into environments, which would ship a
+# Worker without a DB binding. Keep every binding at the top level.
+# Secrets must be provided with `wrangler secret put <NAME>`:
+#   DUITKU_MERCHANT_CODE, DUITKU_API_KEY, BITESHIP_API_KEY,
+#   FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY,
+#   FIREBASE_API_KEY, EMAIL_API_KEY, WEBHOOK_SIGNING_SECRET,
+#   SESSION_SECRET (HMAC key for the SSR session cookie)
+# ---------------------------------------------------------------------------

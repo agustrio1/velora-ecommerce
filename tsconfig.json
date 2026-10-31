@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowJs": false,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "useUnknownInCatchVariables": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "types": [],
+    "paths": {
+      "@velora/shared": ["./packages/shared/src/index.ts"],
+      "@velora/shared/*": ["./packages/shared/src/*"],
+      "@/*": ["./apps/web/app/*"]
+    }
+  },
+  "include": [
+    "packages/shared/src/**/*.ts",
+    "apps/api/src/**/*.ts",
+    "apps/web/app/**/*.ts",
+    "apps/web/app/**/*.tsx",
+    "apps/web/workers/**/*.ts",
+    "apps/web/*.ts",
+    "infra/**/*.ts",
+    "infra/**/*.d.ts",
+    "tests/**/*.ts",
+    "types/**/*.d.ts"
+  ],
+  "exclude": ["node_modules", "apps/web/dist", ".wrangler"]
+}
