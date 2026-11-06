@@ -466,7 +466,7 @@ function PaymentOption({
       <PaymentLogo url={method.icon} name={method.name} />
       <div className="min-w-0 flex-1">
         <div className="truncate font-medium">{method.name}</div>
-        <div className="text-xs text-muted">{method.fee > 0 ? `Biaya ${rupiah(method.fee)}` : 'Tanpa biaya'}</div>
+        {/*  <div className="text-xs text-muted">{method.fee > 0 ? `Biaya ${rupiah(method.fee)}` : 'Tanpa biaya'}</div> */}
       </div>
     </label>
   );
