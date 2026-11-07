@@ -65,6 +65,8 @@ FIREBASE_DATABASE_URL = "https://velora-d3b5f-default-rtdb.asia-southeast1.fireb
 [observability]
 enabled = true
 
+
+
 # ---------------------------------------------------------------------------
 # Deployment: `bun run deploy` (build + `wrangler deploy --config apps/web/build/server/wrangler.json`).
 # NOTE: do NOT introduce an [env.production] block — Wrangler does not inherit

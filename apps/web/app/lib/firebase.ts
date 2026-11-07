@@ -1,4 +1,10 @@
-import { type FirebaseApp, getApps, initializeApp } from 'firebase/app';
+
+import {
+  type FirebaseApp,
+  getApps,
+  initializeApp,
+} from 'firebase/app';
+
 import {
   type Auth,
   EmailAuthProvider,
@@ -16,185 +22,384 @@ import {
   updatePassword,
   updateProfile,
 } from 'firebase/auth';
-import { type MessagePayload, getMessaging, getToken, isSupported, onMessage } from 'firebase/messaging';
+
+import {
+  type MessagePayload,
+  getMessaging,
+  getToken,
+  isSupported,
+  onMessage,
+} from 'firebase/messaging';
+
 import { config, firebaseConfigured } from './config';
 
 /**
- * Firebase is used only for web auth on the client. The Worker re-verifies every
- * ID token against Google and derives roles from D1, so a tampered token here
- * grants nothing. When Firebase isn't configured the store still browses.
+ * Firebase is used for client-side authentication and web push.
+ *
+ * Configuration is loaded at runtime from the Cloudflare Worker.
+ * The Worker independently verifies every Firebase ID token and
+ * derives authorization roles from D1.
+ *
+ * When Firebase is unavailable, public store browsing remains available.
  */
 
 let app: FirebaseApp | null = null;
 let authRef: Auth | null = null;
 
+/**
+ * Initialize Firebase lazily.
+ *
+ * This function must only be called after runtime configuration
+ * has been loaded.
+ */
 function ensureApp(): FirebaseApp {
-  const existing = getApps();
-  if (existing.length) return existing[0];
-  app = initializeApp(toFirebaseConfig());
-  return app;
-}
-
-function requireApp(): FirebaseApp {
-  if (!firebaseConfigured) {
-    throw new Error('Firebase belum dikonfigurasi. Isi VITE_FIREBASE_* pada apps/web/.env.');
+  if (app) {
+    return app;
   }
-  return ensureApp();
-}
 
-function requireAuth(): Auth {
-  if (!authRef) authRef = getAuth(requireApp());
-  return authRef;
-}
+  const existing = getApps();
 
-function toFirebaseConfig() {
-  return {
+  if (existing.length > 0) {
+    app = existing[0];
+    return app;
+  }
+
+  app = initializeApp({
     apiKey: config.firebase.apiKey,
     authDomain: config.firebase.authDomain,
     projectId: config.firebase.projectId,
-    appId: config.firebase.appId,
+    storageBucket: config.firebase.storageBucket,
     messagingSenderId: config.firebase.messagingSenderId,
+    appId: config.firebase.appId,
+    measurementId: config.firebase.measurementId,
     databaseURL: config.firebase.databaseURL,
-  };
+  });
+
+  return app;
 }
 
+/**
+ * Require a configured Firebase application.
+ */
+function requireApp(): FirebaseApp {
+  if (!firebaseConfigured) {
+    throw new Error(
+      'Firebase belum dikonfigurasi. Periksa Cloudflare Firebase runtime configuration.',
+    );
+  }
+
+  return ensureApp();
+}
+
+/**
+ * Get Firebase Auth instance.
+ */
+function requireAuth(): Auth {
+  if (!authRef) {
+    authRef = getAuth(requireApp());
+  }
+
+  return authRef;
+}
+
+/**
+ * Check whether Firebase configuration is available.
+ */
 export function isFirebaseReady(): boolean {
   return firebaseConfigured;
 }
 
-export function subscribeAuth(cb: (user: User | null) => void): () => void {
+/**
+ * Subscribe to Firebase authentication state.
+ */
+export function subscribeAuth(
+  cb: (user: User | null) => void,
+): () => void {
   if (!firebaseConfigured) {
     cb(null);
     return () => undefined;
   }
+
   return onAuthStateChanged(requireAuth(), cb);
 }
 
-/** Force-refreshed ID token, or null when signed out / unconfigured. */
-export async function currentIdToken(force = false): Promise<string | null> {
-  if (!firebaseConfigured) return null;
+/**
+ * Get current Firebase ID token.
+ *
+ * Returns null when the user is signed out or Firebase is unavailable.
+ */
+export async function currentIdToken(
+  force = false,
+): Promise<string | null> {
+  if (!firebaseConfigured) {
+    return null;
+  }
+
   const user = requireAuth().currentUser;
-  if (!user) return null;
+
+  if (!user) {
+    return null;
+  }
+
   return user.getIdToken(force);
 }
 
-export async function signIn(email: string, password: string): Promise<User> {
-  return signInWithEmailAndPassword(requireAuth(), email.trim(), password).then((r) => r.user);
-}
+/**
+ * Sign in using email and password.
+ */
+export async function signIn(
+  email: string,
+  password: string,
+): Promise<User> {
+  const credential = await signInWithEmailAndPassword(
+    requireAuth(),
+    email.trim(),
+    password,
+  );
 
-export async function register(name: string, email: string, password: string): Promise<User> {
-  const cred = await createUserWithEmailAndPassword(requireAuth(), email.trim(), password);
-  if (name.trim()) {
-    await updateProfile(cred.user, { displayName: name.trim() });
-  }
-  return cred.user;
-}
-
-export async function signInWithGoogle(): Promise<User> {
-  const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: 'select_account' });
-  const cred = await signInWithPopup(requireAuth(), provider);
-  return cred.user;
-}
-
-export async function requestReset(email: string): Promise<void> {
-  await sendPasswordResetEmail(requireAuth(), email.trim());
-}
-
-/** Google-only accounts have no password provider until a reset link adds one. */
-export function hasPasswordProvider(): boolean {
-  if (!firebaseConfigured) return false;
-  const user = requireAuth().currentUser;
-  return Boolean(user?.providerData.some((provider) => provider.providerId === 'password'));
+  return credential.user;
 }
 
 /**
- * Change the password of the signed-in account. Firebase refuses credential
- * updates from a stale session, so the current password doubles as proof of
- * ownership instead of forcing a sign-out / sign-in round trip.
+ * Register a new account.
  */
-export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+export async function register(
+  name: string,
+  email: string,
+  password: string,
+): Promise<User> {
+  const credential = await createUserWithEmailAndPassword(
+    requireAuth(),
+    email.trim(),
+    password,
+  );
+
+  if (name.trim()) {
+    await updateProfile(credential.user, {
+      displayName: name.trim(),
+    });
+  }
+
+  return credential.user;
+}
+
+/**
+ * Sign in using Google OAuth popup.
+ */
+export async function signInWithGoogle(): Promise<User> {
+  const provider = new GoogleAuthProvider();
+
+  provider.setCustomParameters({
+    prompt: 'select_account',
+  });
+
+  const credential = await signInWithPopup(
+    requireAuth(),
+    provider,
+  );
+
+  return credential.user;
+}
+
+/**
+ * Send password reset email.
+ */
+export async function requestReset(
+  email: string,
+): Promise<void> {
+  await sendPasswordResetEmail(
+    requireAuth(),
+    email.trim(),
+  );
+}
+
+/**
+ * Check whether the current account has an email/password provider.
+ */
+export function hasPasswordProvider(): boolean {
+  if (!firebaseConfigured) {
+    return false;
+  }
+
+  const user = requireAuth().currentUser;
+
+  return Boolean(
+    user?.providerData.some(
+      (provider) => provider.providerId === 'password',
+    ),
+  );
+}
+
+/**
+ * Change password for the signed-in account.
+ *
+ * The current password is used to reauthenticate before updating.
+ */
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
   const auth = requireAuth();
   const user = auth.currentUser;
   const email = user?.email;
-  if (!user || !email) throw new Error('Sesi berakhir. Masuk kembali untuk mengubah kata sandi.');
-  await reauthenticateWithCredential(user, EmailAuthProvider.credential(email, currentPassword));
+
+  if (!user || !email) {
+    throw new Error(
+      'Sesi berakhir. Masuk kembali untuk mengubah kata sandi.',
+    );
+  }
+
+  await reauthenticateWithCredential(
+    user,
+    EmailAuthProvider.credential(
+      email,
+      currentPassword,
+    ),
+  );
+
   await updatePassword(user, newPassword);
 }
 
+/**
+ * Sign out from Firebase.
+ */
 export async function logout(): Promise<void> {
-  if (!firebaseConfigured) return;
+  if (!firebaseConfigured) {
+    return;
+  }
+
   await signOut(requireAuth());
 }
 
-export function forceTokenRefresh(): Promise<string | null> {
-  if (!firebaseConfigured) return Promise.resolve(null);
+/**
+ * Force-refresh the current Firebase ID token.
+ */
+export async function forceTokenRefresh(): Promise<string | null> {
+  if (!firebaseConfigured) {
+    return null;
+  }
+
   const user = requireAuth().currentUser;
-  return user ? getIdToken(user, true) : Promise.resolve(null);
+
+  if (!user) {
+    return null;
+  }
+
+  return getIdToken(user, true);
 }
 
-/* ------------------------------ push / FCM -------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* Push notifications / Firebase Cloud Messaging                             */
+/* -------------------------------------------------------------------------- */
 
-/** Web push is opt-in and needs Firebase, a VAPID key and a SW-capable browser. */
+/**
+ * Check whether Firebase Web Push is configurable in this browser.
+ */
 export function pushConfigurable(): boolean {
   return (
     firebaseConfigured &&
     Boolean(config.firebase.vapidKey) &&
+    typeof window !== 'undefined' &&
     typeof navigator !== 'undefined' &&
     'serviceWorker' in navigator &&
-    typeof window !== 'undefined' &&
     'Notification' in window
   );
 }
 
 /**
- * Ask for notification permission and mint an FCM device token for the signed-in
- * browser. Returns null when the platform is unsupported, permission is denied,
- * or Firebase/FCM isn't configured — callers must degrade quietly so the store
- * keeps working without push (per DOC section 11).
+ * Register this browser for Firebase Cloud Messaging.
+ *
+ * Returns null when:
+ * - Firebase is not configured.
+ * - Browser does not support FCM.
+ * - Notification permission is denied.
+ * - VAPID key is unavailable.
+ * - Registration fails.
  */
 export async function registerPushToken(): Promise<string | null> {
-  if (!pushConfigurable()) return null;
+  if (!pushConfigurable()) {
+    return null;
+  }
+
   try {
     const supported = await isSupported();
-    if (!supported) return null;
-    if (Notification.permission !== 'granted') {
-      const result = await Notification.requestPermission();
-      if (result !== 'granted') return null;
+
+    if (!supported) {
+      return null;
     }
-    const registration = await navigator.serviceWorker.register(swSrc(), { scope: '/' });
+
+    if (Notification.permission !== 'granted') {
+      const permission = await Notification.requestPermission();
+
+      if (permission !== 'granted') {
+        return null;
+      }
+    }
+
+    const registration = await navigator.serviceWorker.register(
+      swSrc(),
+      {
+        scope: '/',
+      },
+    );
+
     const messaging = getMessaging(requireApp());
+
     return await getToken(messaging, {
       vapidKey: config.firebase.vapidKey,
       serviceWorkerRegistration: registration,
     });
-  } catch {
+  } catch (error) {
+    console.error(
+      '[VELORA] Push notification registration failed:',
+      error,
+    );
+
     return null;
   }
 }
 
-/** Subscribe to pushes delivered while the app is in the foreground. */
-export function onForegroundPush(cb: (payload: MessagePayload) => void): () => void {
-  if (!pushConfigurable()) return () => undefined;
+/**
+ * Listen for foreground Firebase messages.
+ */
+export function onForegroundPush(
+  cb: (payload: MessagePayload) => void,
+): () => void {
+  if (!pushConfigurable()) {
+    return () => undefined;
+  }
+
   try {
-    return onMessage(getMessaging(requireApp()), cb);
-  } catch {
+    return onMessage(
+      getMessaging(requireApp()),
+      cb,
+    );
+  } catch (error) {
+    console.error(
+      '[VELORA] Foreground push initialization failed:',
+      error,
+    );
+
     return () => undefined;
   }
 }
 
 /**
- * Public Firebase web config values are safe to expose (see .env.example) but
- * never belong in a committed static file, so the service worker receives them
- * through its registration URL instead of a hard-coded blob.
+ * Build the Firebase Messaging service worker URL.
+ *
+ * Firebase Web SDK configuration is passed through the registration URL
+ * instead of being hardcoded into a committed static file.
  */
 function swSrc(): string {
   const params = new URLSearchParams({
     apiKey: config.firebase.apiKey,
     authDomain: config.firebase.authDomain,
     projectId: config.firebase.projectId,
+    storageBucket: config.firebase.storageBucket,
     messagingSenderId: config.firebase.messagingSenderId,
     appId: config.firebase.appId,
+    measurementId: config.firebase.measurementId,
   });
+
   return `/firebase-messaging-sw.js?${params.toString()}`;
 }

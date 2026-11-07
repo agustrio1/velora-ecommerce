@@ -1,3 +1,4 @@
+
 /**
  * Cloudflare bindings + runtime configuration for the VELORA Worker.
  * Secrets arrive from `wrangler secret put` / `.dev.vars`; nothing sensitive is
@@ -30,20 +31,32 @@ export interface Env {
   /** Optional shared secret for the inbound Biteship webhook. */
   BITESHIP_WEBHOOK_SECRET?: string;
 
+  // Firebase Web SDK — public runtime configuration
+  VITE_FIREBASE_API_KEY?: string;
+  VITE_FIREBASE_AUTH_DOMAIN?: string;
+  VITE_FIREBASE_PROJECT_ID?: string;
+  VITE_FIREBASE_STORAGE_BUCKET?: string;
+  VITE_FIREBASE_MESSAGING_SENDER_ID?: string;
+  VITE_FIREBASE_APP_ID?: string;
+  VITE_FIREBASE_MEASUREMENT_ID?: string;
+  VITE_FIREBASE_VAPID_KEY?: string;
+
   // Secrets — Firebase service account (server side only: FCM + RTDB REST)
   FIREBASE_PROJECT_ID?: string;
   FIREBASE_CLIENT_EMAIL?: string;
   FIREBASE_PRIVATE_KEY?: string;
+
   /** Web app API key, only used for Firebase Realtime Database REST auth= param. */
   FIREBASE_WEB_API_KEY?: string;
-  VITE_FIREBASE_PROJECT_ID?: string;
+
+  VITE_FIREBASE_DATABASE_URL?: string;
+
   /**
    * Explicit Realtime Database host. Projects created after 2019 live on
    * `<project>-default-rtdb.<region>.firebasedatabase.app` — the legacy
    * `<project>.firebaseio.com` host answers 404, so it must be configurable.
    */
   FIREBASE_DATABASE_URL?: string;
-  VITE_FIREBASE_DATABASE_URL?: string;
 
   // Secrets — email
   EMAIL_PROVIDER?: string;
@@ -105,11 +118,21 @@ const DUITKU = {
 
 export function flags(c: Env): RuntimeFlags {
   const env: AppEnvironment =
-    c.APP_ENV === 'production' ? 'production' : c.APP_ENV === 'staging' ? 'staging' : 'development';
+    c.APP_ENV === 'production'
+      ? 'production'
+      : c.APP_ENV === 'staging'
+        ? 'staging'
+        : 'development';
+
   const duitkuSandbox = (c.DUITKU_ENVIRONMENT ?? 'sandbox').toLowerCase() !== 'production';
   const biteshipSandbox = (c.BITESHIP_ENVIRONMENT ?? 'sandbox').toLowerCase() !== 'production';
+
   const projectId = c.FIREBASE_PROJECT_ID || c.VITE_FIREBASE_PROJECT_ID || null;
-  const privateKey = c.FIREBASE_PRIVATE_KEY ? c.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : null;
+
+  const privateKey = c.FIREBASE_PRIVATE_KEY
+    ? c.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+    : null;
+
   /* Legacy `firebaseio.com` returns 404 for new projects, so an explicit host wins. */
   const databaseUrl =
     (c.FIREBASE_DATABASE_URL || c.VITE_FIREBASE_DATABASE_URL || '').replace(/\/$/, '') ||
@@ -119,6 +142,7 @@ export function flags(c: Env): RuntimeFlags {
     env,
     appUrl: (c.APP_URL || '').replace(/\/$/, ''),
     isProduction: env === 'production',
+
     duitku: {
       configured: Boolean(c.DUITKU_MERCHANT_CODE && c.DUITKU_API_KEY),
       merchantCode: c.DUITKU_MERCHANT_CODE ?? '',
@@ -127,12 +151,14 @@ export function flags(c: Env): RuntimeFlags {
       baseUrl: duitkuSandbox ? DUITKU.sandboxBase : DUITKU.liveBase,
       expiryMinutes: 60,
     },
+
     biteship: {
       configured: Boolean(c.BITESHIP_API_KEY),
       apiKey: c.BITESHIP_API_KEY ?? '',
       sandbox: biteshipSandbox,
       baseUrl: 'https://api.biteship.com',
     },
+
     firebase: {
       projectId,
       configured: Boolean(projectId && c.FIREBASE_CLIENT_EMAIL && privateKey),
@@ -140,6 +166,7 @@ export function flags(c: Env): RuntimeFlags {
       privateKey,
       databaseUrl,
     },
+
     email: {
       configured: Boolean(c.EMAIL_API_KEY && c.EMAIL_FROM),
       provider: c.EMAIL_PROVIDER ?? 'resend',
